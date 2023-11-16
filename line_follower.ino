@@ -1,141 +1,141 @@
-#include  <Arduino.h>
+int IN1 = 2;
+int IN2 = 3;
+int INA = 5;
+int IN3 = 7;
+int IN4 = 8;
+int INB = 9;
 
-// Declaración de los pines que controlarana los motores
-int Motor1A = 7;   // IN1
-int Motor1B = 6;   // IN2
-int Motor2C = 5;   // IN3
-int Motor2D = 4;   // IN4
-int infPin = 10;    // Izquierdo - pin de infrarojos utilizado como entrada digital
-int infPin1 = 8;   // Derecho
-int infPinM = 9;
-int valorInf = 0;  // Valor inicial de la lectura digital de los infrarrojos
-int valorInf1 = 0;
-int valorInfM = 0;
-int ENA = 11;
-int ENB = 3;
-int velocidad = 100;
-// Declaración del método para avanzar
-void Avanzar(){
-    digitalWrite(Motor1A, HIGH);
-    digitalWrite(Motor1B, LOW);
-    analogWrite(ENA,velocidad);
+// Infrarojo
+int infrarojo_izquierdo = 10;
+int infrarojo_derecho = 11;
+int infrarojo_medio = 6;
+int infrarojo_lateral_derecho = 12;
+int infrarojo_lateral_izquierdo = 4;
 
-    digitalWrite(Motor2C, HIGH);
-    digitalWrite(Motor2D, LOW);
-    analogWrite(ENB,velocidad);
-    delay(1);
-}
+// Variables de entorno
+int velocidad = 95;
+int tiempo_ejecucion = 5;
+int retraso = 1;
+int negro = 1;
+int blanco = 0;
 
-// Declaración del método para girar a la derecha
-void girarDerecha(){
-    digitalWrite(Motor1A, HIGH);
-    digitalWrite(Motor1B, LOW);
-    analogWrite(ENA,velocidad);
+// Variables para los sensores
+int valor_inicial_infrarojo_izq = 0;
+int valor_inicial_infrarojo_der = 0;
+int valor_inicial_infrarojo_med = 0;
+int valor_inicial_infrarojo_lat_der = 0;
+int valor_inicial_infrarojo_lat_izq = 0;
 
-    digitalWrite(Motor2C, LOW);
-    digitalWrite(Motor2D, LOW);
-    analogWrite(ENB,velocidad);
-    delay(1);
-}
-
-// Declaración del método para girar a la izquierda
-void girarIzquierda(){
-    digitalWrite(Motor1A, LOW);
-    digitalWrite(Motor1B, LOW);
-    analogWrite(ENA,velocidad);
-
-    digitalWrite(Motor2D, LOW);
-    digitalWrite(Motor2C, HIGH);
-    analogWrite(ENB,velocidad);
-    delay(1);
-}
-
-// Declaración del método para detener el vehiculo en caso de detectar una línea negra
-void Stop(){
-    digitalWrite(Motor1A, LOW);
-    digitalWrite(Motor1B, LOW);
-    analogWrite(ENA,velocidad);
-    digitalWrite(Motor2D, LOW);
-    digitalWrite(Motor2C, LOW);
-    analogWrite(ENB,velocidad);
-    delay(500);
-}
-
-// Configuración de los sensores y los pines
-void setup() {
+void setup(){
   Serial.begin(9600);
-  pinMode(infPin, INPUT);
-  pinMode(infPin1, INPUT);
-  pinMode(Motor1A, OUTPUT);
-  pinMode(Motor1B, OUTPUT);
-  pinMode(Motor2D, OUTPUT);
-  pinMode(Motor2C, OUTPUT);
-  pinMode(ENA, OUTPUT);
-  pinMode(ENB, OUTPUT);
-  digitalWrite(Motor1A, LOW);
-  digitalWrite(Motor1B, LOW);
-  digitalWrite(Motor2D, LOW);
-  digitalWrite(Motor2C, LOW);
+  pinMode(infrarojo_izquierdo, INPUT);
+  pinMode(infrarojo_derecho, INPUT);
+  pinMode(infrarojo_medio, INPUT);
+  pinMode(infrarojo_lateral_derecho, INPUT);
+  pinMode(infrarojo_lateral_izquierdo, INPUT);
+
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(INA, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(INB, OUTPUT);
+  pinMode(13, OUTPUT);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
 }
 
-// Ejecución continua de todos los métodos
-void loop() {
-  valorInf = digitalRead(infPin);   // Valor de entrada para el infrarrojo izquierdo
-  valorInf1 = digitalRead(infPin1); // Valor de entrada para el infrarrojo derecho
-  valorInfM = digitalRead(infPinM); // Valor de entrada para el infrarroljo de en medio
+void loop(){
 
-  if (valorInf == 0 && valorInfM == 1 && valorInf1 == 0) { // Avance 
-    Serial.println("Avanzar");
-    Avanzar();
-  }
+  while (true){
+    valor_inicial_infrarojo_izq = digitalRead(infrarojo_izquierdo);
+    valor_inicial_infrarojo_der = digitalRead(infrarojo_derecho);
+    valor_inicial_infrarojo_med = digitalRead(infrarojo_medio);
+    valor_inicial_infrarojo_lat_der = digitalRead(infrarojo_lateral_derecho);
+    valor_inicial_infrarojo_lat_izq = digitalRead(infrarojo_lateral_izquierdo);
+    
+    if (valor_inicial_infrarojo_izq == blanco && valor_inicial_infrarojo_med == negro && valor_inicial_infrarojo_der == blanco){
+      movimiento_delante();
+    }
+    else if (valor_inicial_infrarojo_izq == negro && (valor_inicial_infrarojo_med == blanco || valor_inicial_infrarojo_med == negro) && valor_inicial_infrarojo_der == negro){
+      movimiento_delante();
+    }
+    // Girar izquierda
+    else if ( (valor_inicial_infrarojo_izq == blanco || valor_inicial_infrarojo_lat_izq == blanco) && (valor_inicial_infrarojo_med == negro || valor_inicial_infrarojo_med == blanco) && (valor_inicial_infrarojo_der == negro || valor_inicial_infrarojo_lat_der == negro)){
+      movimiento_derecha();
+    }
+    // Girar derecha
+    else if ((valor_inicial_infrarojo_izq == negro || valor_inicial_infrarojo_lat_izq == negro) && (valor_inicial_infrarojo_med == blanco || valor_inicial_infrarojo_med == negro) && (valor_inicial_infrarojo_der == blanco || valor_inicial_infrarojo_lat_der == blanco)){
+      movimiento_izquierda();
+    }
+    // condicion para drift
+    else if (valor_inicial_infrarojo_izq == blanco && valor_inicial_infrarojo_med == blanco && valor_inicial_infrarojo_der == blanco){
+      detenerse();
+    }
+    else {
+      detenerse();
+    }
 
-  else if(valorInf == 0 && valorInfM == 1 && valorInf1 == 1){ // Gira hacia la derecha
-    Serial.println("derecha");
-    girarDerecha();
-  }
-  else if (valorInf == 0 && valorInfM == 0 && valorInf1 == 1){
-    Serial.println("derecha");
-    girarDerecha();
-  }
 
-  else if (valorInf == 1 && valorInfM == 1 && valorInf1 == 0) { // Gira hacia la izquierda
-    Serial.println("izquierda");
-    girarIzquierda();
-
-  }
-  else if (valorInf == 1 && valorInfM == 0 && valorInf1 == 0){
-    Serial.println("izquierda");
-    girarIzquierda();
-  }
-
-  else if (valorInf == 1 && valorInfM == 1 && valorInf1 == 1) { // STOP
-    Serial.println("Avanzar todos prendidos");
-    Avanzar();
-  }
-
-  else if (valorInf == 0 && valorInfM == 0 && valorInf1 == 0){
-    Avanzar();
-    delay(1000);
-    girarDerecha();
-    delay(1000);
-    girarIzquierda();
-    delay(1000);
+    
   }
 
-  else if (valorInf == 1 && valorInfM == 0 && valorInf1 == 1){
-    Avanzar();
-  }
-
-  else{
-    Serial.println("Giro xd");
-    Serial.println("El valor INF "); Serial.println(valorInf);
-    Serial.println("El valor INF1 "); Serial.println(valorInf1);
-    Serial.println("El valor INFM "); Serial.println(valorInfM);
-    Avanzar();
-    delay(1000);
-    girarDerecha();
-    delay(1000);
-    girarIzquierda();
-    delay(1000);
-  }
 }
+
+void movimiento_delante(){ 
+  analogWrite(INB, velocidad);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+
+  analogWrite(INA, velocidad);
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  delay(tiempo_ejecucion);
+}
+
+void movimiento_atras(){
+  analogWrite(INB, velocidad);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+
+  analogWrite(INA, velocidad);
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  delay(tiempo_ejecucion);
+}
+
+void movimiento_derecha(){
+
+  analogWrite(INB, velocidad+75);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+
+  analogWrite(INA, velocidad);
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  delay(tiempo_ejecucion);
+}
+
+void movimiento_izquierda(){
+
+  analogWrite(INA, velocidad+75);
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+
+  analogWrite(INB, velocidad);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  delay(tiempo_ejecucion);
+}
+
+void detenerse(){
+  analogWrite(INA, 0);
+  analogWrite(INB, 0);
+  delay(retraso);
+}
+
+
+
+
